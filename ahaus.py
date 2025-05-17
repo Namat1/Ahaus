@@ -47,11 +47,10 @@ def process_file(file):
     entries = []
 
     for _, row in df.iterrows():
-        name = row[3]
-        vorname = row[5]
-        lkw = row[10]
-        az = row[12]
-        datum = row[13]
+        name = row[3] if pd.notna(row[3]) else row[6]
+        vorname = row[4] if pd.notna(row[4]) else row[7]
+        lkw = row[11]
+        datum = row[14]
         kommentar = row[15]
 
         if pd.notna(name) and check_zulage(kommentar):
@@ -123,7 +122,6 @@ def write_excel(monatsdaten):
             ws.cell(row=current_row, column=2, value=f"{summe} €")
             current_row += 1
 
-        # Spaltenbreite anpassen (120% des max-Inhalts)
         for col in range(1, 6):
             max_length = max(
                 len(str(ws.cell(row=r, column=col).value)) if ws.cell(row=r, column=col).value else 0
@@ -131,7 +129,7 @@ def write_excel(monatsdaten):
             )
             ws.column_dimensions[get_column_letter(col)].width = max_length * 1.2
 
-        ws.row_dimensions[1].hidden = True  # Zeile 1 ausblenden
+        ws.row_dimensions[1].hidden = True
 
     wb.save(output)
     return output

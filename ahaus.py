@@ -47,19 +47,20 @@ def process_file(file):
     entries = []
 
     for _, row in df.iterrows():
-        nachname = row[3] if pd.notna(row[3]) else row[6]
+        nachname_raw = row[3] if pd.notna(row[3]) else row[6]
         vorname = row[4] if pd.notna(row[4]) else row[7]
         lkw = row[11]
         datum = row[14]
         kommentar = row[15]
 
-        if pd.notna(nachname) and check_zulage(kommentar):
+        if pd.notna(nachname_raw) and check_zulage(kommentar):
             monat, jahr = get_month_year(datum)
             if monat and jahr:
-                name_str = f"{nachname}, {vorname}"
-                zulage = 0 if str(nachname).strip().lower() == "zippel" else 20
+                nachname_check = str(nachname_raw).strip().lower()
+                zulage = 0 if "zippel" in nachname_check else 20
+
                 eintrag = {
-                    "Name": name_str,
+                    "Name": f"{nachname_raw}, {vorname}",
                     "LKW": lkw,
                     "Datum": pd.to_datetime(datum, errors='coerce'),
                     "KW": get_kw(datum),
@@ -114,7 +115,6 @@ def write_excel(monatsdaten):
 
             current_row += 1
 
-        # Autobreite auf 200 % aller Zellen
         max_cols = ws.max_column
         for col in range(1, max_cols + 1):
             max_length = max(

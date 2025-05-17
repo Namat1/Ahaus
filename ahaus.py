@@ -33,14 +33,10 @@ def get_kw(date):
     except:
         return ""
 
-def check_zulage(comment, name):
-    if isinstance(comment, str) and isinstance(name, str):
+def check_zulage(comment):
+    if isinstance(comment, str):
         comment_lower = comment.lower()
-        name_lower = name.lower()
-        return (
-            any(x in comment_lower for x in ["ahaus", "borkholzhausen", "glandorf", "alles"])
-            and "guthmann" in name_lower
-        )
+        return any(x in comment_lower for x in ["ahaus", "borkholzhausen", "glandorf", "alles"])
     return False
 
 def process_file(file):
@@ -57,15 +53,17 @@ def process_file(file):
         datum = row[14]
         kommentar = row[15]
 
-        if pd.notna(nachname) and check_zulage(kommentar, str(nachname)):
+        if pd.notna(nachname) and check_zulage(kommentar):
             monat, jahr = get_month_year(datum)
             if monat and jahr:
+                name_str = f"{nachname}, {vorname}"
+                zulage = 0 if str(nachname).strip().lower() == "zippel" else 20
                 eintrag = {
-                    "Name": f"{nachname}, {vorname}",
+                    "Name": name_str,
                     "LKW": lkw,
                     "Datum": pd.to_datetime(datum, errors='coerce'),
                     "KW": get_kw(datum),
-                    "Zulage": 20,
+                    "Zulage": zulage,
                     "Monat": monat,
                     "Jahr": jahr
                 }
@@ -116,7 +114,7 @@ def write_excel(monatsdaten):
 
             current_row += 1
 
-        # Autobreite für alle vorhandenen Spalten (200 %)
+        # Autobreite auf 200 % aller Zellen
         max_cols = ws.max_column
         for col in range(1, max_cols + 1):
             max_length = max(
@@ -131,7 +129,7 @@ def write_excel(monatsdaten):
     return output
 
 # Streamlit UI
-st.title("Zulage-Auswertung – nur für Guthmann bei Ahaus / Borkholzhausen / Glandorf / alles")
+st.title("Zulage-Auswertung – 20 € für alle außer Zippel")
 
 uploaded_files = st.file_uploader("Excel-Dateien hochladen", type=["xlsx"], accept_multiple_files=True)
 
@@ -151,7 +149,7 @@ if uploaded_files:
         st.download_button(
             label="📥 Excel herunterladen",
             data=excel_data.getvalue(),
-            file_name="zulagen_guthmann.xlsx",
+            file_name="zulagen_auswertung.xlsx",
             mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
         )
     else:

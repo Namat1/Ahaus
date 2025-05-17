@@ -16,14 +16,22 @@ german_months = {
 def get_month_year(date):
     if pd.isna(date):
         return None, None
-    if isinstance(date, str):
-        date = pd.to_datetime(date, errors='coerce')
-    return date.month, date.year
+    try:
+        if not isinstance(date, pd.Timestamp):
+            date = pd.to_datetime(date, errors='coerce')
+        if pd.isna(date):
+            return None, None
+        return date.month, date.year
+    except:
+        return None, None
 
 def get_kw(date):
     if pd.isna(date):
         return ""
-    return f"KW{pd.to_datetime(date).isocalendar().week}"
+    try:
+        return f"KW{pd.to_datetime(date).isocalendar().week}"
+    except:
+        return ""
 
 def check_zulage(comment):
     if isinstance(comment, str):
@@ -52,7 +60,7 @@ def process_file(file):
                 eintrag = {
                     "Name": f"{name}, {vorname}",
                     "LKW": lkw,
-                    "Datum": pd.to_datetime(datum),
+                    "Datum": pd.to_datetime(datum, errors='coerce'),
                     "KW": get_kw(datum),
                     "Zulage": 20,
                     "Monat": monat,

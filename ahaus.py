@@ -122,6 +122,7 @@ def write_excel(monatsdaten):
 
             current_row += 1
 
+        # Spaltenbreite (200 %)
         max_cols = 6
         for col in range(1, max_cols + 1):
             max_length = max(
@@ -130,7 +131,7 @@ def write_excel(monatsdaten):
             )
             ws.column_dimensions[get_column_letter(col)].width = max_length * 2.0
 
-        ws.row_dimensions[1].hidden = True
+        # Hinweis: Zeile 1 wird NICHT mehr ausgeblendet
 
     wb.save(output)
     return output

@@ -157,7 +157,7 @@ if uploaded_files:
         st.download_button(
             label="📥 Excel herunterladen",
             data=excel_data.getvalue(),
-            file_name="zulagen_auswertung.xlsx",
+            file_name="Ahaus_Auswertung.xlsx",
             mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
         )
     else:

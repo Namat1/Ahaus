@@ -60,7 +60,6 @@ def process_file(file):
                 zulage = 0 if "zippel" in nachname_check else 20
                 name = f"{nachname_raw}, {vorname}"
 
-                # Ahaus Info aus Spalte 2
                 ahaus_info = ""
                 if isinstance(kommentar, str) and "ahaus" in kommentar.lower():
                     ahaus_info = str(row[1]) if pd.notna(row[1]) else ""
@@ -105,7 +104,7 @@ def write_excel(monatsdaten):
                     cell = ws.cell(row=current_row, column=col)
                     cell.fill = header_fill
                     cell.font = Font(bold=True)
-                    cell.alignment = Alignment(horizontal="center")
+                    cell.alignment = Alignment(horizontal="left")
                     cell.border = thin_border
                 current_row += 1
                 current_name = name
@@ -118,7 +117,7 @@ def write_excel(monatsdaten):
             ws.cell(row=current_row, column=6, value=eintrag.get("Ahaus Info", ""))
 
             for col in range(1, 7):
-                ws.cell(row=current_row, column=col).alignment = Alignment(horizontal="center")
+                ws.cell(row=current_row, column=col).alignment = Alignment(horizontal="left")
                 ws.cell(row=current_row, column=col).border = thin_border
 
             current_row += 1

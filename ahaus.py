@@ -137,7 +137,7 @@ def write_excel(monatsdaten):
     return output
 
 # Streamlit UI
-st.title("Zulage-Auswertung – 20 € für alle außer Zippel + Ahaus-Zusatzinfo")
+st.title("Zulage Ahaus")
 
 uploaded_files = st.file_uploader("Excel-Dateien hochladen", type=["xlsx"], accept_multiple_files=True)
 

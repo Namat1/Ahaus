@@ -36,7 +36,7 @@ def get_kw(date):
 def check_zulage(comment):
     if isinstance(comment, str):
         comment_lower = comment.lower()
-        return any(x in comment_lower for x in ["ahaus", "borkholzhausen", "glandorf", "alles", "füngers"])
+        return any(x in comment_lower for x in ["ahaus", "borkholzhausen", "glandorf", "alles"])
     return False
 
 def process_file(file):
@@ -60,10 +60,10 @@ def process_file(file):
                 zulage = 0 if "zippel" in nachname_check else 20
                 name = f"{nachname_raw}, {vorname}"
 
-                # Füngers Info aus Spalte 2, falls vorhanden
-                fuengers_info = ""
-                if isinstance(kommentar, str) and "füngers" in kommentar.lower():
-                    fuengers_info = str(row[1]) if pd.notna(row[1]) else ""
+                # Ahaus Info aus Spalte 2
+                ahaus_info = ""
+                if isinstance(kommentar, str) and "ahaus" in kommentar.lower():
+                    ahaus_info = str(row[1]) if pd.notna(row[1]) else ""
 
                 eintrag = {
                     "Name": name,
@@ -73,7 +73,7 @@ def process_file(file):
                     "Zulage": zulage,
                     "Monat": monat,
                     "Jahr": jahr,
-                    "Füngers Info": fuengers_info
+                    "Ahaus Info": ahaus_info
                 }
                 entries.append(eintrag)
     return entries
@@ -100,7 +100,7 @@ def write_excel(monatsdaten):
             if name != current_name:
                 if current_name is not None:
                     current_row += 1
-                ws.append(["Name", "Datum", "KW", "LKW", "Zulage (€)", "Füngers Info"])
+                ws.append(["Name", "Datum", "KW", "LKW", "Zulage (€)", "Ahaus Info"])
                 for col in range(1, 7):
                     cell = ws.cell(row=current_row, column=col)
                     cell.fill = header_fill
@@ -115,7 +115,7 @@ def write_excel(monatsdaten):
             ws.cell(row=current_row, column=3, value=eintrag["KW"])
             ws.cell(row=current_row, column=4, value=eintrag["LKW"])
             ws.cell(row=current_row, column=5, value=f"{eintrag['Zulage']} €")
-            ws.cell(row=current_row, column=6, value=eintrag.get("Füngers Info", ""))
+            ws.cell(row=current_row, column=6, value=eintrag.get("Ahaus Info", ""))
 
             for col in range(1, 7):
                 ws.cell(row=current_row, column=col).alignment = Alignment(horizontal="center")
@@ -123,7 +123,6 @@ def write_excel(monatsdaten):
 
             current_row += 1
 
-        # Autobreite 200 % auf alle 6 Spalten
         max_cols = 6
         for col in range(1, max_cols + 1):
             max_length = max(
@@ -138,7 +137,7 @@ def write_excel(monatsdaten):
     return output
 
 # Streamlit UI
-st.title("Zulage-Auswertung – 20 € für alle außer Zippel + Füngers-Zusatzinfo")
+st.title("Zulage-Auswertung – 20 € für alle außer Zippel + Ahaus-Zusatzinfo")
 
 uploaded_files = st.file_uploader("Excel-Dateien hochladen", type=["xlsx"], accept_multiple_files=True)
 

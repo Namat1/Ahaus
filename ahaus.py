@@ -33,10 +33,14 @@ def get_kw(date):
     except:
         return ""
 
-def check_zulage(comment):
-    if isinstance(comment, str):
+def check_zulage(comment, name):
+    if isinstance(comment, str) and isinstance(name, str):
         comment_lower = comment.lower()
-        return any(x in comment_lower for x in ["ahaus", "borkholzhausen", "glandorf", "alles"])
+        name_lower = name.lower()
+        return (
+            any(x in comment_lower for x in ["ahaus", "borkholzhausen", "glandorf", "alles"])
+            and "guthmann" in name_lower
+        )
     return False
 
 def process_file(file):
@@ -47,17 +51,17 @@ def process_file(file):
     entries = []
 
     for _, row in df.iterrows():
-        name = row[3] if pd.notna(row[3]) else row[6]
+        nachname = row[3] if pd.notna(row[3]) else row[6]
         vorname = row[4] if pd.notna(row[4]) else row[7]
         lkw = row[11]
         datum = row[14]
         kommentar = row[15]
 
-        if pd.notna(name) and check_zulage(kommentar):
+        if pd.notna(nachname) and check_zulage(kommentar, str(nachname)):
             monat, jahr = get_month_year(datum)
             if monat and jahr:
                 eintrag = {
-                    "Name": f"{name}, {vorname}",
+                    "Name": f"{nachname}, {vorname}",
                     "LKW": lkw,
                     "Datum": pd.to_datetime(datum, errors='coerce'),
                     "KW": get_kw(datum),
@@ -112,14 +116,14 @@ def write_excel(monatsdaten):
 
             current_row += 1
 
-        # Autobreite für alle Spalten (1–max verwendet)
+        # Autobreite für alle vorhandenen Spalten (200 %)
         max_cols = ws.max_column
         for col in range(1, max_cols + 1):
             max_length = max(
                 len(str(ws.cell(row=r, column=col).value)) if ws.cell(row=r, column=col).value else 0
                 for r in range(1, ws.max_row + 1)
             )
-            ws.column_dimensions[get_column_letter(col)].width = max_length * 1.2
+            ws.column_dimensions[get_column_letter(col)].width = max_length * 2.0
 
         ws.row_dimensions[1].hidden = True
 
@@ -127,7 +131,7 @@ def write_excel(monatsdaten):
     return output
 
 # Streamlit UI
-st.title("Zulage-Auswertung für Ahaus / Borkholzhausen / Glandorf / alles")
+st.title("Zulage-Auswertung – nur für Guthmann bei Ahaus / Borkholzhausen / Glandorf / alles")
 
 uploaded_files = st.file_uploader("Excel-Dateien hochladen", type=["xlsx"], accept_multiple_files=True)
 
@@ -147,7 +151,7 @@ if uploaded_files:
         st.download_button(
             label="📥 Excel herunterladen",
             data=excel_data.getvalue(),
-            file_name="zulagen_auswertung.xlsx",
+            file_name="zulagen_guthmann.xlsx",
             mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
         )
     else:

@@ -78,12 +78,12 @@ def write_excel(monatsdaten):
     thin_border = Border(left=Side(style='thin'), right=Side(style='thin'),
                          top=Side(style='thin'), bottom=Side(style='thin'))
 
-    for (monat, jahr), daten in monatsdaten.items():
+    for (monat, jahr) in sorted(monatsdaten.keys(), key=lambda x: (x[1], x[0])):
+        daten = monatsdaten[(monat, jahr)]
         ws = wb.create_sheet(f"{german_months[monat]} {jahr}")
         daten.sort(key=lambda x: (x["Name"], x["Datum"]))
         current_row = 2
         current_name = None
-        monatsgesamt = {}
 
         for eintrag in daten:
             name = eintrag["Name"]
@@ -110,19 +110,11 @@ def write_excel(monatsdaten):
                 ws.cell(row=current_row, column=col).alignment = Alignment(horizontal="center")
                 ws.cell(row=current_row, column=col).border = thin_border
 
-            monatsgesamt[name] = monatsgesamt.get(name, 0) + eintrag["Zulage"]
             current_row += 1
 
-        current_row += 2
-        ws.cell(row=current_row, column=1, value="Monatssumme pro Fahrer:")
-        ws.cell(row=current_row, column=1).font = Font(bold=True)
-        current_row += 1
-        for name, summe in monatsgesamt.items():
-            ws.cell(row=current_row, column=1, value=name)
-            ws.cell(row=current_row, column=2, value=f"{summe} €")
-            current_row += 1
-
-        for col in range(1, 6):
+        # Autobreite für alle Spalten (1–max verwendet)
+        max_cols = ws.max_column
+        for col in range(1, max_cols + 1):
             max_length = max(
                 len(str(ws.cell(row=r, column=col).value)) if ws.cell(row=r, column=col).value else 0
                 for r in range(1, ws.max_row + 1)

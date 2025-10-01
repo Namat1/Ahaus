@@ -82,10 +82,26 @@ def write_excel(monatsdaten):
     wb = Workbook()
     wb.remove(wb.active)
 
-    header_fill = PatternFill(start_color="ADD8E6", end_color="ADD8E6", fill_type="solid")
-    name_fill = PatternFill(start_color="FFA500", end_color="FFA500", fill_type="solid")
-    thin_border = Border(left=Side(style='thin'), right=Side(style='thin'),
-                         top=Side(style='thin'), bottom=Side(style='thin'))
+    # Moderne Farbpalette
+    header_fill = PatternFill(start_color="D9E2F3", end_color="D9E2F3", fill_type="solid")  # Hellblau
+    name_fill = PatternFill(start_color="4472C4", end_color="4472C4", fill_type="solid")  # Mittelblau
+    data_fill_white = PatternFill(start_color="FFFFFF", end_color="FFFFFF", fill_type="solid")  # Weiß
+    data_fill_light = PatternFill(start_color="F8F9FA", end_color="F8F9FA", fill_type="solid")  # Hellgrau
+    
+    # Rahmen
+    thin_border = Border(
+        left=Side(style='thin', color='CCCCCC'),
+        right=Side(style='thin', color='CCCCCC'),
+        top=Side(style='thin', color='CCCCCC'),
+        bottom=Side(style='thin', color='CCCCCC')
+    )
+    
+    medium_border = Border(
+        left=Side(style='medium', color='1F4E78'),
+        right=Side(style='medium', color='1F4E78'),
+        top=Side(style='medium', color='1F4E78'),
+        bottom=Side(style='medium', color='1F4E78')
+    )
 
     for (monat, jahr) in sorted(monatsdaten.keys(), key=lambda x: (x[1], x[0])):
         daten = monatsdaten[(monat, jahr)]
@@ -93,45 +109,103 @@ def write_excel(monatsdaten):
         daten.sort(key=lambda x: (x["Name"], x["Datum"]))
         current_row = 2
         current_name = None
+        alternate_row = False
 
         for eintrag in daten:
             name = eintrag["Name"]
+            
+            # Neue Person = Header-Zeile einfügen
             if name != current_name:
                 if current_name is not None:
-                    current_row += 1
+                    current_row += 1  # Leerzeile zwischen Personen
+                
+                # Header-Zeile (Name, Datum, KW, LKW, Zulage, Ahaus Info)
                 ws.append(["Name", "Datum", "KW", "LKW", "Zulage (€)", "Ahaus Info"])
                 for col in range(1, 7):
                     cell = ws.cell(row=current_row, column=col)
                     cell.fill = header_fill
-                    cell.font = Font(bold=True)
-                    cell.alignment = Alignment(horizontal="left")
+                    cell.font = Font(name="Calibri", bold=True, size=10, color="1F4E78")
+                    cell.alignment = Alignment(horizontal="center", vertical="center")
                     cell.border = thin_border
+                
+                ws.row_dimensions[current_row].height = 20
                 current_row += 1
                 current_name = name
+                alternate_row = False
 
-            ws.cell(row=current_row, column=1, value=name).fill = name_fill
+            # Datenzeile mit alternierender Farbe
+            fill_color = data_fill_white if alternate_row else data_fill_light
+            
+            # Name-Zelle (erste Spalte mit Name)
+            name_cell = ws.cell(row=current_row, column=1, value=name)
+            name_cell.fill = name_fill
+            name_cell.font = Font(name="Calibri", bold=True, size=11, color="FFFFFF")
+            name_cell.alignment = Alignment(horizontal="left", vertical="center")
+            name_cell.border = thin_border
+            
+            # Restliche Zellen
             ws.cell(row=current_row, column=2, value=eintrag["Datum"].strftime("%d.%m.%Y"))
             ws.cell(row=current_row, column=3, value=eintrag["KW"])
             ws.cell(row=current_row, column=4, value=eintrag["LKW"])
-            ws.cell(row=current_row, column=5, value=f"{eintrag['Zulage']} €")
+            
+            # Zulage mit Währungsformat
+            zulage_cell = ws.cell(row=current_row, column=5, value=eintrag['Zulage'])
+            zulage_cell.number_format = '#,##0.00 €'
+            if eintrag['Zulage'] > 0:
+                zulage_cell.font = Font(name="Calibri", size=10, color="70AD47", bold=True)
+            else:
+                zulage_cell.font = Font(name="Calibri", size=10, color="2C3E50")
+            
             ws.cell(row=current_row, column=6, value=eintrag.get("Ahaus Info", ""))
 
-            for col in range(1, 7):
-                ws.cell(row=current_row, column=col).alignment = Alignment(horizontal="left")
-                ws.cell(row=current_row, column=col).border = thin_border
-
+            # Styling für Daten-Zellen (außer Name und Zulage, die schon gestyled sind)
+            for col in [2, 3, 4, 6]:
+                cell = ws.cell(row=current_row, column=col)
+                cell.fill = fill_color
+                cell.font = Font(name="Calibri", size=10, color="2C3E50")
+                cell.alignment = Alignment(horizontal="left", vertical="center")
+                cell.border = thin_border
+            
+            # Zulage-Zelle bekommt auch Fill und Border
+            zulage_cell.fill = fill_color
+            zulage_cell.alignment = Alignment(horizontal="right", vertical="center")
+            zulage_cell.border = thin_border
+            
+            ws.row_dimensions[current_row].height = 20
             current_row += 1
+            alternate_row = not alternate_row
 
-        # Spaltenbreite (200 %)
+        # Spaltenbreiten mit Mindestbreiten
+        column_min_widths = {
+            1: 25,  # Name
+            2: 18,  # Datum
+            3: 12,  # KW
+            4: 15,  # LKW
+            5: 18,  # Zulage
+            6: 30   # Ahaus Info
+        }
+        
         max_cols = 6
         for col in range(1, max_cols + 1):
             max_length = max(
                 len(str(ws.cell(row=r, column=col).value)) if ws.cell(row=r, column=col).value else 0
                 for r in range(1, ws.max_row + 1)
             )
-            ws.column_dimensions[get_column_letter(col)].width = max_length * 2.0
+            
+            # Berechne Breite mit Puffer
+            calculated_width = max_length + 4
+            
+            # Verwende Mindestbreite falls definiert
+            min_width = column_min_widths.get(col, 12)
+            adjusted_width = max(calculated_width, min_width)
+            
+            # Maximalbreite begrenzen
+            adjusted_width = min(adjusted_width, 70)
+            
+            ws.column_dimensions[get_column_letter(col)].width = adjusted_width
 
-        # Hinweis: Zeile 1 wird NICHT mehr ausgeblendet
+        # Freeze Panes für bessere Navigation
+        ws.freeze_panes = "A3"
 
     wb.save(output)
     return output

@@ -87,6 +87,7 @@ def write_excel(monatsdaten):
     name_fill = PatternFill(start_color="4472C4", end_color="4472C4", fill_type="solid")  # Mittelblau
     data_fill_white = PatternFill(start_color="FFFFFF", end_color="FFFFFF", fill_type="solid")  # Weiß
     data_fill_light = PatternFill(start_color="F8F9FA", end_color="F8F9FA", fill_type="solid")  # Hellgrau
+    total_fill = PatternFill(start_color="70AD47", end_color="70AD47", fill_type="solid")  # Grün für Summen
     
     # Rahmen
     thin_border = Border(
@@ -110,12 +111,32 @@ def write_excel(monatsdaten):
         current_row = 2
         current_name = None
         alternate_row = False
+        fahrer_summe = 0  # Summe für aktuellen Fahrer
 
-        for eintrag in daten:
+        for idx, eintrag in enumerate(daten):
             name = eintrag["Name"]
             
-            # Neue Person = Header-Zeile einfügen
+            # Wenn neuer Fahrer beginnt, vorherigen Fahrer abschließen mit Summenzeile
             if name != current_name:
+                # Summenzeile für vorherigen Fahrer (falls vorhanden)
+                if current_name is not None and fahrer_summe > 0:
+                    ws.cell(row=current_row, column=1, value="Gesamtzulage")
+                    ws.cell(row=current_row, column=5, value=fahrer_summe)
+                    
+                    for col in range(1, 7):
+                        cell = ws.cell(row=current_row, column=col)
+                        cell.fill = total_fill
+                        cell.font = Font(name="Calibri", bold=True, size=11, color="FFFFFF")
+                        cell.alignment = Alignment(horizontal="right", vertical="center")
+                        cell.border = medium_border
+                        
+                        if col == 5:
+                            cell.number_format = '#,##0.00 €'
+                    
+                    ws.row_dimensions[current_row].height = 22
+                    current_row += 1
+                    fahrer_summe = 0
+                
                 if current_name is not None:
                     current_row += 1  # Leerzeile zwischen Personen
                 
@@ -174,6 +195,26 @@ def write_excel(monatsdaten):
             ws.row_dimensions[current_row].height = 20
             current_row += 1
             alternate_row = not alternate_row
+            
+            # Zur Summe hinzufügen
+            fahrer_summe += eintrag['Zulage']
+
+        # Letzte Summenzeile am Ende des Sheets
+        if current_name is not None and fahrer_summe > 0:
+            ws.cell(row=current_row, column=1, value="Gesamtzulage")
+            ws.cell(row=current_row, column=5, value=fahrer_summe)
+            
+            for col in range(1, 7):
+                cell = ws.cell(row=current_row, column=col)
+                cell.fill = total_fill
+                cell.font = Font(name="Calibri", bold=True, size=11, color="FFFFFF")
+                cell.alignment = Alignment(horizontal="right", vertical="center")
+                cell.border = medium_border
+                
+                if col == 5:
+                    cell.number_format = '#,##0.00 €'
+            
+            ws.row_dimensions[current_row].height = 22
 
         # Spaltenbreiten mit Mindestbreiten
         column_min_widths = {

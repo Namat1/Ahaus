@@ -153,7 +153,7 @@ def write_excel(monatsdaten):
                     current_row += 1  # Leerzeile zwischen Personen
                 
                 # Header-Zeile (Name, Datum, KW, LKW, Zulage, Ahaus Info)
-                ws.append(["Name", "Datum", "KW", "LKW", "Zulage (€)", "Ahaus Info"])
+                ws.append(["Name", "Datum", "KW", "LKW", "Zulage (€)", "Info"])
                 for col in range(1, 7):
                     cell = ws.cell(row=current_row, column=col)
                     cell.fill = header_fill

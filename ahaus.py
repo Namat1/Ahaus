@@ -73,9 +73,8 @@ def process_file(file):
                 zulage = 0 if "zippel" in nachname_check else 20
                 name = f"{nachname_raw}, {vorname}"
 
-                ahaus_info = ""
-                if isinstance(kommentar, str) and "ahaus" in kommentar.lower():
-                    ahaus_info = str(row[1]) if pd.notna(row[1]) else ""
+                ahaus_info = str(row[1]) if pd.notna(row[1]) else ""
+
 
                 eintrag = {
                     "Name": name,

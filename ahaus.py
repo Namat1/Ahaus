@@ -36,7 +36,17 @@ def get_kw(date):
 def check_zulage(comment):
     if isinstance(comment, str):
         comment_lower = comment.lower()
-        return any(x in comment_lower for x in ["ahaus", "borkholzhausen", "glandorf", "alles"])
+        return any(x in comment_lower for x in [
+            "ahaus",
+            "borkholzhausen",
+            "glandorf",
+            "optifair",
+            "opti fair",
+            "edv",
+            "edv fleisch"
+            "Elfering"
+            "Elfering Ahaus
+        ])
     return False
 
 def process_file(file):

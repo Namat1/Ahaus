@@ -17,7 +17,7 @@ def get_month_year(date):
         return None, None
     try:
         if not isinstance(date, pd.Timestamp):
-            date = pd.to_datetime(date, errors='coerce')
+            date = pd.to_datetime(date, errors="coerce")
         if pd.isna(date):
             return None, None
         return date.month, date.year
@@ -46,8 +46,8 @@ ZULAGE_KEYWORDS = [
 
 def check_zulage(comment):
     if isinstance(comment, str):
-        comment_lower = comment.lower()
-        return any(k in comment_lower for k in ZULAGE_KEYWORDS)
+        c = comment.lower()
+        return any(k in c for k in ZULAGE_KEYWORDS)
     return False
 
 def process_file(file):
@@ -58,11 +58,11 @@ def process_file(file):
     entries = []
 
     for _, row in df.iterrows():
-        lkw = row[11]   # Spalte L
-        datum = row[14] # Spalte O
-        kommentar = row[15]  # Spalte P
+        # feste Spalten
+        lkw = row[11] if len(row) > 11 else ""
+        datum = row[14] if len(row) > 14 else pd.NaT
+        kommentar = row[15] if len(row) > 15 else ""
 
-        # nur wenn Kommentar zulagenrelevant ist
         if not check_zulage(kommentar):
             continue
 
@@ -70,40 +70,40 @@ def process_file(file):
         if not (monat and jahr):
             continue
 
-        # Info soll IMMER aus Spalte B kommen
-        info = str(row[1]) if pd.notna(row[1]) else ""
+        # Info IMMER aus Spalte B
+        info = str(row[1]).strip() if len(row) > 1 and pd.notna(row[1]) else ""
 
-        # ggf. 2 Fahrer in einer Zeile: (D/E) und (G/H)
-        fahrer_paare = [
-            (row[3], row[4]),  # Nachname D, Vorname E
-            (row[6], row[7])   # Nachname G, Vorname H
-        ]
+        # 2 Fahrer-Paare: D/E und G/H
+        fahrer_paare = []
+        if len(row) > 4:
+            fahrer_paare.append((row[3], row[4]))  # D/E
+        if len(row) > 7:
+            fahrer_paare.append((row[6], row[7]))  # G/H
 
-        seen_names = set()  # verhindert doppelte Einträge, falls beide Paare identisch sind
+        seen = set()
 
         for nachname_raw, vorname_raw in fahrer_paare:
             if pd.isna(nachname_raw) and pd.isna(vorname_raw):
                 continue
 
             nachname = str(nachname_raw).strip() if pd.notna(nachname_raw) else ""
-            vorname = str(vorname_raw).strip() if pd.notna(vorname_raw) else ""
+            vorname  = str(vorname_raw).strip() if pd.notna(vorname_raw) else ""
 
             if not nachname:
                 continue
 
             name = f"{nachname}, {vorname}".strip().rstrip(",")
-            name_key = name.lower()
-            if name_key in seen_names:
+            key = name.lower()
+            if key in seen:
                 continue
-            seen_names.add(name_key)
+            seen.add(key)
 
-            # Zulage pro Fahrer
             zulage = 0 if "zippel" in nachname.lower() else 20
 
             entries.append({
                 "Name": name,
                 "LKW": lkw,
-                "Datum": pd.to_datetime(datum, errors='coerce'),
+                "Datum": pd.to_datetime(datum, errors="coerce"),
                 "KW": get_kw(datum),
                 "Zulage": zulage,
                 "Monat": monat,
@@ -118,34 +118,55 @@ def write_excel(monatsdaten):
     wb = Workbook()
     wb.remove(wb.active)
 
-    # Moderne Farbpalette
-    header_fill = PatternFill(start_color="D9E2F3", end_color="D9E2F3", fill_type="solid")  # Hellblau
-    name_fill = PatternFill(start_color="4472C4", end_color="4472C4", fill_type="solid")    # Mittelblau
+    # Farben
+    header_fill = PatternFill(start_color="D9E2F3", end_color="D9E2F3", fill_type="solid")
+    name_fill   = PatternFill(start_color="4472C4", end_color="4472C4", fill_type="solid")
     data_fill_white = PatternFill(start_color="FFFFFF", end_color="FFFFFF", fill_type="solid")
     data_fill_light = PatternFill(start_color="F8F9FA", end_color="F8F9FA", fill_type="solid")
-    total_fill = PatternFill(start_color="70AD47", end_color="70AD47", fill_type="solid")
+    total_fill  = PatternFill(start_color="70AD47", end_color="70AD47", fill_type="solid")
 
-    # Rahmen
     thin_border = Border(
-        left=Side(style='thin', color='CCCCCC'),
-        right=Side(style='thin', color='CCCCCC'),
-        top=Side(style='thin', color='CCCCCC'),
-        bottom=Side(style='thin', color='CCCCCC')
+        left=Side(style="thin", color="CCCCCC"),
+        right=Side(style="thin", color="CCCCCC"),
+        top=Side(style="thin", color="CCCCCC"),
+        bottom=Side(style="thin", color="CCCCCC")
+    )
+    medium_border = Border(
+        left=Side(style="medium", color="1F4E78"),
+        right=Side(style="medium", color="1F4E78"),
+        top=Side(style="medium", color="1F4E78"),
+        bottom=Side(style="medium", color="1F4E78")
     )
 
-    medium_border = Border(
-        left=Side(style='medium', color='1F4E78'),
-        right=Side(style='medium', color='1F4E78'),
-        top=Side(style='medium', color='1F4E78'),
-        bottom=Side(style='medium', color='1F4E78')
-    )
+    def write_header(ws, r):
+        headers = ["Name", "Datum", "KW", "LKW", "Zulage (€)", "Info"]
+        for c, v in enumerate(headers, start=1):
+            cell = ws.cell(row=r, column=c, value=v)
+            cell.fill = header_fill
+            cell.font = Font(name="Calibri", bold=True, size=10, color="1F4E78")
+            cell.alignment = Alignment(horizontal="center", vertical="center")
+            cell.border = thin_border
+        ws.row_dimensions[r].height = 20
+
+    def write_sum(ws, r, summe):
+        ws.cell(row=r, column=1, value="Gesamtzulage")
+        ws.cell(row=r, column=5, value=summe)
+        for c in range(1, 7):
+            cell = ws.cell(row=r, column=c)
+            cell.fill = total_fill
+            cell.font = Font(name="Calibri", bold=True, size=11, color="FFFFFF")
+            cell.alignment = Alignment(horizontal="right", vertical="center")
+            cell.border = medium_border
+            if c == 5:
+                cell.number_format = '#,##0.00 €'
+        ws.row_dimensions[r].height = 22
 
     for (monat, jahr) in sorted(monatsdaten.keys(), key=lambda x: (x[1], x[0])):
         daten = monatsdaten[(monat, jahr)]
         ws = wb.create_sheet(f"{german_months[monat]} {jahr}")
         daten.sort(key=lambda x: (x["Name"], x["Datum"]))
 
-        current_row = 2
+        current_row = 1
         current_name = None
         alternate_row = False
         fahrer_summe = 0
@@ -153,69 +174,52 @@ def write_excel(monatsdaten):
         for eintrag in daten:
             name = eintrag["Name"]
 
-            # neuer Fahrer -> vorherige Summenzeile schreiben
             if name != current_name:
+                # vorherigen Fahrer abschließen
                 if current_name is not None and fahrer_summe > 0:
-                    ws.cell(row=current_row, column=1, value="Gesamtzulage")
-                    ws.cell(row=current_row, column=5, value=fahrer_summe)
-
-                    for col in range(1, 7):
-                        cell = ws.cell(row=current_row, column=col)
-                        cell.fill = total_fill
-                        cell.font = Font(name="Calibri", bold=True, size=11, color="FFFFFF")
-                        cell.alignment = Alignment(horizontal="right", vertical="center")
-                        cell.border = medium_border
-                        if col == 5:
-                            cell.number_format = '#,##0.00 €'
-
-                    ws.row_dimensions[current_row].height = 22
                     current_row += 1
+                    write_sum(ws, current_row, fahrer_summe)
                     fahrer_summe = 0
+                    current_row += 2  # Summenzeile + Leerzeile
 
-                if current_name is not None:
-                    current_row += 1  # Leerzeile zwischen Personen
-
-                # Header
-                ws.append(["Name", "Datum", "KW", "LKW", "Zulage (€)", "Info"])
-                for col in range(1, 7):
-                    cell = ws.cell(row=current_row, column=col)
-                    cell.fill = header_fill
-                    cell.font = Font(name="Calibri", bold=True, size=10, color="1F4E78")
-                    cell.alignment = Alignment(horizontal="center", vertical="center")
-                    cell.border = thin_border
-
-                ws.row_dimensions[current_row].height = 20
+                # neuen Header schreiben
+                write_header(ws, current_row, )
                 current_row += 1
                 current_name = name
                 alternate_row = False
 
-            # Datenzeile
             fill_color = data_fill_white if alternate_row else data_fill_light
 
-            # Name-Spalte
-            name_cell = ws.cell(row=current_row, column=1, value=name)
-            name_cell.fill = name_fill
-            name_cell.font = Font(name="Calibri", bold=True, size=11, color="FFFFFF")
-            name_cell.alignment = Alignment(horizontal="left", vertical="center")
-            name_cell.border = thin_border
+            # Name
+            c1 = ws.cell(row=current_row, column=1, value=name)
+            c1.fill = name_fill
+            c1.font = Font(name="Calibri", bold=True, size=11, color="FFFFFF")
+            c1.alignment = Alignment(horizontal="left", vertical="center")
+            c1.border = thin_border
 
-            # Restliche Zellen
-            ws.cell(row=current_row, column=2, value=eintrag["Datum"].strftime("%d.%m.%Y") if pd.notna(eintrag["Datum"]) else "")
+            # Datum / KW / LKW
+            datum_str = ""
+            if pd.notna(eintrag["Datum"]):
+                datum_str = eintrag["Datum"].strftime("%d.%m.%Y")
+
+            ws.cell(row=current_row, column=2, value=datum_str)
             ws.cell(row=current_row, column=3, value=eintrag["KW"])
             ws.cell(row=current_row, column=4, value=eintrag["LKW"])
 
-            zulage_cell = ws.cell(row=current_row, column=5, value=eintrag["Zulage"])
-            zulage_cell.number_format = '#,##0.00 €'
-            zulage_cell.font = Font(
+            # Zulage
+            z = ws.cell(row=current_row, column=5, value=eintrag["Zulage"])
+            z.number_format = '#,##0.00 €'
+            z.font = Font(
                 name="Calibri",
                 size=10,
                 color="70AD47" if eintrag["Zulage"] > 0 else "2C3E50",
                 bold=True if eintrag["Zulage"] > 0 else False
             )
 
+            # Info
             ws.cell(row=current_row, column=6, value=eintrag.get("Info", ""))
 
-            # Styling (außer Name)
+            # Styling rest
             for col in [2, 3, 4, 6]:
                 cell = ws.cell(row=current_row, column=col)
                 cell.fill = fill_color
@@ -223,57 +227,32 @@ def write_excel(monatsdaten):
                 cell.alignment = Alignment(horizontal="left", vertical="center")
                 cell.border = thin_border
 
-            # Zulage styling
-            zulage_cell.fill = fill_color
-            zulage_cell.alignment = Alignment(horizontal="right", vertical="center")
-            zulage_cell.border = thin_border
+            z.fill = fill_color
+            z.alignment = Alignment(horizontal="right", vertical="center")
+            z.border = thin_border
 
             ws.row_dimensions[current_row].height = 20
             current_row += 1
             alternate_row = not alternate_row
-
             fahrer_summe += eintrag["Zulage"]
 
         # letzte Summenzeile
         if current_name is not None and fahrer_summe > 0:
-            ws.cell(row=current_row, column=1, value="Gesamtzulage")
-            ws.cell(row=current_row, column=5, value=fahrer_summe)
-
-            for col in range(1, 7):
-                cell = ws.cell(row=current_row, column=col)
-                cell.fill = total_fill
-                cell.font = Font(name="Calibri", bold=True, size=11, color="FFFFFF")
-                cell.alignment = Alignment(horizontal="right", vertical="center")
-                cell.border = medium_border
-                if col == 5:
-                    cell.number_format = '#,##0.00 €'
-
-            ws.row_dimensions[current_row].height = 22
+            write_sum(ws, current_row, fahrer_summe)
 
         # Spaltenbreiten
-        column_min_widths = {
-            1: 25,  # Name
-            2: 18,  # Datum
-            3: 12,  # KW
-            4: 15,  # LKW
-            5: 18,  # Zulage
-            6: 30   # Info
-        }
+        column_min_widths = {1: 25, 2: 18, 3: 12, 4: 15, 5: 18, 6: 30}
+        for col in range(1, 7):
+            max_len = 0
+            for r in range(1, ws.max_row + 1):
+                v = ws.cell(row=r, column=col).value
+                if v is None:
+                    continue
+                max_len = max(max_len, len(str(v)))
+            width = min(max(max_len + 4, column_min_widths.get(col, 12)), 70)
+            ws.column_dimensions[get_column_letter(col)].width = width
 
-        max_cols = 6
-        for col in range(1, max_cols + 1):
-            max_length = max(
-                len(str(ws.cell(row=r, column=col).value)) if ws.cell(row=r, column=col).value else 0
-                for r in range(1, ws.max_row + 1)
-            )
-            calculated_width = max_length + 4
-            min_width = column_min_widths.get(col, 12)
-            adjusted_width = max(calculated_width, min_width)
-            adjusted_width = min(adjusted_width, 70)
-            ws.column_dimensions[get_column_letter(col)].width = adjusted_width
-
-        # Freeze Panes
-        ws.freeze_panes = "A3"
+        ws.freeze_panes = "A2"
 
     wb.save(output)
     return output
@@ -290,9 +269,9 @@ if uploaded_files:
 
     if alle_eintraege:
         monatsweise = {}
-        for eintrag in alle_eintraege:
-            key = (eintrag["Monat"], eintrag["Jahr"])
-            monatsweise.setdefault(key, []).append(eintrag)
+        for e in alle_eintraege:
+            key = (e["Monat"], e["Jahr"])
+            monatsweise.setdefault(key, []).append(e)
 
         excel_data = write_excel(monatsweise)
         st.download_button(

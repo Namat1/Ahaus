@@ -84,7 +84,7 @@ def process_file(file):
                     "Zulage": zulage,
                     "Monat": monat,
                     "Jahr": jahr,
-                    "Ahaus Info": ahaus_info
+                    "Info": ahaus_info
                 }
                 entries.append(eintrag)
     return entries

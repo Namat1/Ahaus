@@ -33,21 +33,24 @@ def get_kw(date):
     except:
         return ""
 
+ZULAGE_KEYWORDS = [
+    "ahaus",
+    "borkholzhausen",
+    "glandorf",
+    "optifair",
+    "opti fair",
+    "edv",
+    "edv fleisch",
+    "elfering",
+    "elfering ahaus"
+]
+
 def check_zulage(comment):
     if isinstance(comment, str):
         comment_lower = comment.lower()
-        return any(x in comment_lower for x in [
-            "ahaus",
-            "borkholzhausen",
-            "glandorf",
-            "optifair",
-            "opti fair",
-            "edv",
-            "edv fleisch"
-            "Elfering"
-            "Elfering Ahaus
-        ])
+        return any(k in comment_lower for k in ZULAGE_KEYWORDS)
     return False
+
 
 def process_file(file):
     df = pd.read_excel(file, sheet_name=0, header=None)

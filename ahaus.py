@@ -189,7 +189,7 @@ def write_excel(monatsdaten):
             else:
                 zulage_cell.font = Font(name="Calibri", size=10, color="2C3E50")
             
-            ws.cell(row=current_row, column=6, value=eintrag.get("Ahaus Info", ""))
+            ws.cell(row=current_row, column=6, value=eintrag.get("Info", ""))
 
             # Styling für Daten-Zellen (außer Name und Zulage, die schon gestyled sind)
             for col in [2, 3, 4, 6]:
